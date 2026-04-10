@@ -24,7 +24,7 @@ metadata:
 ## API cible
 
 **WinnerFlex Enterprise API** (Cyncly)
-Base URL : `https://eapi.flex.cloud`
+Base URL : `https://api.flex.cloud`
 Modules utilisés : Contact, Lead, Project, Document
 
 ## 1. Configuration et authentification
@@ -38,10 +38,10 @@ ORG_GUID  = os.environ.get("WINNERFLEX_ORG_GUID","7233a416-6c3e-4edf-a33e-6500d2
 SHOP_GUID = os.environ.get("WINNERFLEX_SHOP_GUID","06c0643c-3b88-4d44-92d3-9b71161958e2")
 USER_GUID = os.environ.get("WINNERFLEX_USER_GUID", "10d79d99-1de7-49fd-a592-3b756954d4a5")  # optionnel — agent dédié recommandé
 
-BASE_URL = "https://eapi.flex.cloud"
+BASE_URL = "https://api.flex.cloud"
 
 HEADERS = {
-    "X-Api-Key":  API_KEY,
+    "apiKey":  API_KEY,
     "Content-Type": "application/json",
     "Accept": "application/json",
 }
@@ -65,16 +65,21 @@ def find_contact(email: str = None, name: str = None) -> dict | None:
     Cherche un contact par email ou nom.
     Retourne le premier résultat ou None.
     """
-    params = _params()
+    body = {
+        "orgGuid": ORG_GUID,
+        "shopGuid": SHOP_GUID,
+    }
+    if USER_GUID:
+        body["userGuid"] = USER_GUID
     if email:
-        params["email"] = email
+        body["email"] = email
     if name:
-        params["name"] = name
+        body["name"] = name
 
-    r = requests.get(
-        f"{BASE_URL}/api/contact",
+    r = requests.post(
+        f"{BASE_URL}/eapi/v1/contacts/filter",
         headers=HEADERS,
-        params=params
+        json=body
     )
     r.raise_for_status()
     results = r.json().get("items", r.json() if isinstance(r.json(), list) else [])
@@ -109,7 +114,7 @@ def create_contact(data: dict) -> str:
         payload["userGuid"] = USER_GUID
 
     r = requests.post(
-        f"{BASE_URL}/api/contact",
+        f"{BASE_URL}/eapi/v1/contacts",
         headers=HEADERS,
         json=payload
     )
@@ -127,14 +132,19 @@ def list_leads(status: str = None) -> list:
     Retourne la liste des leads.
     status : filtre optionnel (ex: "open", "won", "lost")
     """
-    params = _params()
+    body = {
+        "orgGuid": ORG_GUID,
+        "shopGuid": SHOP_GUID,
+    }
+    if USER_GUID:
+        body["userGuid"] = USER_GUID
     if status:
-        params["status"] = status
+        body["status"] = status
 
-    r = requests.get(
-        f"{BASE_URL}/api/lead",
+    r = requests.post(
+        f"{BASE_URL}/eapi/v1/leads/filter",
         headers=HEADERS,
-        params=params
+        json=body
     )
     r.raise_for_status()
     return r.json().get("items", r.json() if isinstance(r.json(), list) else [])
@@ -166,7 +176,7 @@ def create_lead(contact_guid: str, data: dict) -> str:
         payload["userGuid"] = USER_GUID
 
     r = requests.post(
-        f"{BASE_URL}/api/lead",
+        f"{BASE_URL}/eapi/v1/leads",
         headers=HEADERS,
         json=payload
     )
@@ -181,10 +191,17 @@ def create_lead(contact_guid: str, data: dict) -> str:
 ```python
 def list_projects(contact_guid: str) -> list:
     """Retourne tous les projets associés à un contact."""
-    r = requests.get(
-        f"{BASE_URL}/api/project",
+    body = {
+        "orgGuid": ORG_GUID,
+        "shopGuid": SHOP_GUID,
+        "contactGuid": contact_guid,
+    }
+    if USER_GUID:
+        body["userGuid"] = USER_GUID
+    r = requests.post(
+        f"{BASE_URL}/eapi/v1/projects/filter",
         headers=HEADERS,
-        params=_params({"contactGuid": contact_guid})
+        json=body
     )
     r.raise_for_status()
     return r.json().get("items", r.json() if isinstance(r.json(), list) else [])
@@ -197,10 +214,17 @@ def list_projects(contact_guid: str) -> list:
 ```python
 def list_documents(project_guid: str) -> list:
     """Retourne les documents/devis associés à un projet."""
-    r = requests.get(
-        f"{BASE_URL}/api/document",
+    body = {
+        "orgGuid": ORG_GUID,
+        "shopGuid": SHOP_GUID,
+        "projectGuid": project_guid,
+    }
+    if USER_GUID:
+        body["userGuid"] = USER_GUID
+    r = requests.post(
+        f"{BASE_URL}/eapi/v1/documents/filter",
         headers=HEADERS,
-        params=_params({"projectGuid": project_guid})
+        json=body
     )
     r.raise_for_status()
     return r.json().get("items", r.json() if isinstance(r.json(), list) else [])
