@@ -53,7 +53,8 @@ def auth_headers() -> dict:
     return {
         "apiKey": os.environ.get("WINNERFLEX_API_KEY"),
         "Content-Type": "application/json",
-        # Pas de header Accept — conforme à l'implémentation Node validée
+        "User-Agent": "Mozilla/5.0 (compatible; BellaCucina-Agent/1.0)",
+        # User-Agent explicite : Azure WAF bloque python-requests/x.x par défaut
     }
 ```
 
