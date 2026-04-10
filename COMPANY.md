@@ -24,6 +24,7 @@ includes:
   - projects/operations/PROJECT.md
   - tasks/hourly-email-check/TASK.md
   - tasks/weekly-ceo-report/TASK.md
+  - tasks/winnerflex-sync/TASK.md
 requirements:
   secrets:
     - ANTHROPIC_API_KEY

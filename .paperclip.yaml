@@ -105,3 +105,13 @@ routines:
         timezone: Europe/Paris
         enabled: true
     assignee: max
+
+  winnerflex-sync:
+    concurrencyPolicy: skip_if_active
+    catchUpPolicy: skip_missed
+    triggers:
+      - kind: schedule
+        cronExpression: "0 * * * *"
+        timezone: Europe/Paris
+        enabled: true
+    assignee: alex
