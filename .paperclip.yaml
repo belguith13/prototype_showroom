@@ -95,21 +95,21 @@ agents:
 
 routines:
   hourly-email-check:
-    concurrencyPolicy: Forbid
-    catchUpPolicy: Skip
+    concurrencyPolicy: skip_if_active
+    catchUpPolicy: skip_missed
     triggers:
       - kind: schedule
-        cronExpression: "0 10-19 * * 2-6"  # Tue–Sat, every hour 10h–19h CET
+        cronExpression: "0 10-19 * * 2-6"
         timezone: Europe/Paris
         enabled: true
     assignee: alex
 
   weekly-ceo-report:
-    concurrencyPolicy: Forbid
-    catchUpPolicy: Skip
+    concurrencyPolicy: skip_if_active
+    catchUpPolicy: skip_missed
     triggers:
       - kind: schedule
-        cronExpression: "0 8 * * 1"  # Monday 8am CET
+        cronExpression: "0 8 * * 1"
         timezone: Europe/Paris
         enabled: true
     assignee: max

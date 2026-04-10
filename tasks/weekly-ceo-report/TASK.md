@@ -5,6 +5,7 @@ slug: weekly-ceo-report
 name: Rapport hebdomadaire CEO
 description: Synthèse pipeline, alertes CA, rapport exécutif du lundi matin
 assignee: max
+project: operations
 recurring: true
 ---
 

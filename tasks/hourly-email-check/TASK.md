@@ -5,6 +5,7 @@ slug: hourly-email-check
 name: Vérification emails entrants
 description: Triage des emails, qualification des leads, création des drafts de réponse
 assignee: alex
+project: operations
 recurring: true
 ---
 
