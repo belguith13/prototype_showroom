@@ -257,13 +257,34 @@ def create_project(
 
 ## 5. Designs (devis/plans)
 
+### Règle critique — Ne jamais additionner tous les designs
+
+Un projet WinnerFlex contient souvent 5 à 15+ designs (options, variantes, révisions).
+**Seul le design actif reflète la réalité commerciale.**
+Ne jamais faire la somme de tous les `totalSalesPriceExVAT` — ce chiffre est sans signification.
+
+Hiérarchie de statuts (du plus avancé au moins avancé) :
+
+```python
+DESIGN_STATUS_PRIORITY = [
+    "commande envoyée",       # Bon de commande fournisseur émis → design définitif
+    "commande client confirmée",  # Signé par le client
+    "devis envoyé",           # Devis transmis, en attente signature
+    "en cours",               # Design actif non encore chiffré
+]
+# Un design sans statut connu = variante abandonnée, ignorer pour le CA
+```
+
 ### Lister les designs d'un projet
 
 ```python
 def get_project_designs(project_guid: str) -> list:
     """
-    Retourne les designs (plans + prix) d'un projet.
-    Chaque design contient designGuid, designName, totalSalesPriceExVAT…
+    Retourne tous les designs d'un projet avec leurs statuts et prix.
+    Chaque design contient : designGuid, designName, totalSalesPriceExVAT,
+    statuses (liste avec dates), createdOn.
+
+    ⚠️ Ne pas additionner les prix — utiliser get_active_design() pour le CA réel.
     """
     r = requests.post(
         f"{BASE_URL}/eapi/v1/projects/designs/filter",
@@ -273,6 +294,62 @@ def get_project_designs(project_guid: str) -> list:
     r.raise_for_status()
     data = r.json()
     return data if isinstance(data, list) else []
+```
+
+### Obtenir le design actif (CA réel du projet)
+
+```python
+def get_active_design(project_guid: str) -> dict | None:
+    """
+    Retourne le design qui représente la réalité commerciale du projet.
+
+    Logique de sélection (par priorité décroissante) :
+    1. Design avec statut "commande envoyée" le plus récent
+    2. Design avec statut "commande client confirmée" le plus récent
+    3. Design avec statut "devis envoyé" le plus récent
+    4. Design avec le prix le plus récent (fallback)
+
+    Retourne None si aucun design chiffré trouvé.
+    Le champ totalSalesPriceExVAT de ce design = CA HT du projet.
+    """
+    designs = get_project_designs(project_guid)
+    if not designs:
+        return None
+
+    priority_keywords = [
+        "commande envoy",
+        "commande client confirm",
+        "devis envoy",
+    ]
+
+    for keyword in priority_keywords:
+        candidates = []
+        for d in designs:
+            statuses = d.get("statuses", []) or d.get("status", []) or []
+            if isinstance(statuses, list):
+                status_names = [str(s.get("name", "")).lower() for s in statuses]
+            else:
+                status_names = [str(statuses).lower()]
+            if any(keyword in s for s in status_names):
+                candidates.append(d)
+        if candidates:
+            # Prendre le plus récent par date de dernière modification
+            return sorted(
+                candidates,
+                key=lambda d: d.get("lastChanged") or d.get("createdOn") or "",
+                reverse=True,
+            )[0]
+
+    # Fallback : design avec prix > 0 le plus récent
+    priced = [d for d in designs if (d.get("totalSalesPriceExVAT") or 0) > 0]
+    if priced:
+        return sorted(
+            priced,
+            key=lambda d: d.get("lastChanged") or d.get("createdOn") or "",
+            reverse=True,
+        )[0]
+
+    return None
 ```
 
 ## 6. Documents
@@ -289,6 +366,10 @@ DOC_TYPES = {
 }
 ```
 
+Les documents commerciaux (SALES_DOCUMENT) sont la source de vérité pour le CA :
+ils contiennent le montant TTC signé, les remises appliquées, et les conditions de paiement.
+Utiliser `get_project_documents()` filtré sur `SALES_DOCUMENT` pour confirmer le CA d'un design actif.
+
 ### Lister les documents d'un projet
 
 ```python
@@ -296,6 +377,10 @@ def get_project_documents(project_guid: str, type_guids: list = None) -> list:
     """
     Retourne les documents d'un projet (devis, contrats, factures…).
     type_guids : liste de GUIDs de types pour filtrer (optionnel).
+
+    Pour le CA réel d'un projet : filtrer sur DOC_TYPES["SALES_DOCUMENT"]
+    Pour les bons de commande : filtrer sur DOC_TYPES["SUPPLIER_ORDER"]
+
     Note : documents/filter utilise PascalCase dans le body.
     """
     body = {
@@ -346,8 +431,10 @@ project = create_project(
     description="Refaire cuisine env. 12m². Budget ~15 000€. Délai : avant été.",
 )
 
-# 4. Lister les designs existants (si projet déjà travaillé)
-designs = get_project_designs(project["projectGuid"])
+# 4. Obtenir le design actif (CA réel du projet)
+active = get_active_design(project["projectGuid"])
+ca_ht = active["totalSalesPriceExVAT"] if active else 0
+# Ne PAS utiliser get_project_designs() pour calculer un CA
 ```
 
 ## 8. Variables d'environnement requises
