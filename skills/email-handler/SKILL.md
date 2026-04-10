@@ -1,5 +1,8 @@
 ---
-name: email-handler
+schema: agentcompanies/v1
+kind: skill
+slug: email-handler
+name: Email Handler
 description: >
   Use this skill whenever you need to read, classify, or draft emails.
   Covers: reading the inbox (IMAP), classifying incoming messages by type
@@ -8,6 +11,13 @@ description: >
   Use when: a heartbeat fires and you need to check new emails, or when asked
   to reply to or follow up on an email thread.
   Don't use when: the task is purely CRM-based with no email interaction needed.
+license: MIT
+metadata:
+  paperclip:
+    tags:
+      - email
+      - imap
+      - drafts
 ---
 
 # Email Handler Skill
@@ -188,7 +198,7 @@ Quand tu identifies un prospect sans réponse depuis plusieurs jours :
 |---|---|
 | J+3 | Préparer draft de relance douce (voir template ci-dessous) |
 | J+5 | Créer ticket d'alerte assigné à Sophie : "Relance J+5 — [NOM]" |
-| J+10 | Escalader à Max (CEO Assistant) si ticket J+5 non traité |
+| J+10 | Escalader à Max si ticket J+5 non traité |
 
 ### Template relance J+3
 
@@ -222,8 +232,7 @@ EMAIL_USER        contact@bellacucina.fr
 EMAIL_PASS        [mot de passe app ou token OAuth]
 ```
 
-> ⚠️ Ne jamais écrire les credentials en clair dans un fichier de config.
-> Toujours utiliser `os.environ.get("NOM_VARIABLE")`.
+> Toujours utiliser `os.environ.get("NOM_VARIABLE")` — ne jamais hardcoder.
 
 ---
 
@@ -231,6 +240,6 @@ EMAIL_PASS        [mot de passe app ou token OAuth]
 
 - **Lecture seule par défaut** — Alex ne peut pas envoyer d'e-mail sans validation humaine
 - Tout draft est posté comme commentaire dans le ticket Paperclip, pas envoyé directement
-- En cas d'erreur IMAP (connexion refusée, timeout), créer un ticket d'alerte technique assigné à Marc
+- En cas d'erreur IMAP : créer un ticket d'alerte technique assigné à Marc
 - Ne jamais logger le contenu des e-mails dans les fichiers de log (données personnelles)
 - Tronquer les corps d'e-mails à 2000 caractères avant envoi au LLM

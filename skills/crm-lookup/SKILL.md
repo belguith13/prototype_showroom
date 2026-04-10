@@ -1,5 +1,8 @@
 ---
-name: crm-lookup
+schema: agentcompanies/v1
+kind: skill
+slug: crm-lookup
+name: CRM Lookup
 description: >
   Use this skill to consult or update the CRM (customer records).
   Covers: looking up a contact by name or email, creating a new prospect record,
@@ -7,11 +10,19 @@ description: >
   Use when: processing a new lead, checking if a contact already exists,
   or updating a deal status after an action.
   Don't use when: the task involves email reading/writing — use email-handler instead.
+license: MIT
+metadata:
+  paperclip:
+    tags:
+      - crm
+      - notion
+      - pipeline
 ---
 
 # CRM Lookup Skill
 
 ## Backend CRM cible
+
 Ce prototype utilise **Notion** comme CRM léger (base de données Notion).
 La même logique s'applique à HubSpot ou Airtable via leur API REST respective.
 

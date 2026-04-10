@@ -1,0 +1,115 @@
+schema: paperclip/v1
+
+agents:
+  max:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+    inputs:
+      env:
+        ANTHROPIC_API_KEY:
+          kind: secret
+          requirement: required
+          description: "API key for Claude AI"
+        NOTION_TOKEN:
+          kind: secret
+          requirement: required
+          description: "Notion integration token for CRM access (read-only)"
+        NOTION_CRM_DB_ID:
+          kind: secret
+          requirement: required
+          description: "Notion CRM database ID"
+        EMAIL_IMAP_HOST:
+          kind: secret
+          requirement: required
+          description: "IMAP server hostname (e.g. imap.gmail.com)"
+        EMAIL_IMAP_PORT:
+          kind: secret
+          requirement: optional
+          description: "IMAP port (default: 993)"
+        EMAIL_USER:
+          kind: secret
+          requirement: required
+          description: "Email address for team@bellacucina.fr"
+        EMAIL_PASS:
+          kind: secret
+          requirement: required
+          description: "App password or OAuth token for team mailbox"
+    budget:
+      monthlyCents: 4000  # ~40€/month
+    permissions:
+      canCreateAgents: false
+      canManageProjects: true
+      canManageTasks: true
+
+  alex:
+    adapter:
+      type: claude_local
+      config:
+        model: claude-sonnet-4-6
+    inputs:
+      env:
+        ANTHROPIC_API_KEY:
+          kind: secret
+          requirement: required
+          description: "API key for Claude AI"
+        NOTION_TOKEN:
+          kind: secret
+          requirement: required
+          description: "Notion integration token for CRM read/write"
+        NOTION_CRM_DB_ID:
+          kind: secret
+          requirement: required
+          description: "Notion CRM database ID"
+        EMAIL_IMAP_HOST:
+          kind: secret
+          requirement: required
+          description: "IMAP server hostname (e.g. imap.gmail.com)"
+        EMAIL_IMAP_PORT:
+          kind: secret
+          requirement: optional
+          description: "IMAP port (default: 993)"
+        EMAIL_SMTP_HOST:
+          kind: secret
+          requirement: required
+          description: "SMTP server hostname (e.g. smtp.gmail.com)"
+        EMAIL_SMTP_PORT:
+          kind: secret
+          requirement: optional
+          description: "SMTP port (default: 587)"
+        EMAIL_USER:
+          kind: secret
+          requirement: required
+          description: "Email address for contact@bellacucina.fr"
+        EMAIL_PASS:
+          kind: secret
+          requirement: required
+          description: "App password or OAuth token for contact mailbox"
+    budget:
+      monthlyCents: 5000  # ~50€/month
+    permissions:
+      canCreateAgents: false
+      canManageProjects: false
+      canManageTasks: true
+
+routines:
+  hourly-email-check:
+    concurrencyPolicy: Forbid
+    catchUpPolicy: Skip
+    triggers:
+      - kind: schedule
+        cronExpression: "0 10-19 * * 2-6"  # Tue–Sat, every hour 10h–19h CET
+        timezone: Europe/Paris
+        enabled: true
+    assignee: alex
+
+  weekly-ceo-report:
+    concurrencyPolicy: Forbid
+    catchUpPolicy: Skip
+    triggers:
+      - kind: schedule
+        cronExpression: "0 8 * * 1"  # Monday 8am CET
+        timezone: Europe/Paris
+        enabled: true
+    assignee: max
