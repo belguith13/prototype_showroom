@@ -48,11 +48,13 @@ BASE_URL = "https://api.flex.cloud"
 MAIN_ADDRESS_TYPE_GUID = "524bb607-43ce-4de9-942e-936dc30e60d4"
 FRANCE_COUNTRY_GUID    = "9d03832c-be57-45b3-bf5a-f90e81cabbe2"
 
-HEADERS = {
-    "apiKey": API_KEY,
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-}
+def auth_headers() -> dict:
+    """Construit les headers auth à chaque appel (évite None si env chargé après import)."""
+    return {
+        "apiKey": os.environ.get("WINNERFLEX_API_KEY"),
+        "Content-Type": "application/json",
+        # Pas de header Accept — conforme à l'implémentation Node validée
+    }
 ```
 
 ## 2. Test de connexion
@@ -75,7 +77,7 @@ def list_contacts() -> list:
     """Retourne tous les contacts du shop."""
     r = requests.post(
         f"{BASE_URL}/eapi/v1/contacts/filter",
-        headers=HEADERS,
+        headers=auth_headers(),
         json={"shopGuid": SHOP_GUID},
     )
     r.raise_for_status()
@@ -93,7 +95,7 @@ def find_contact(search: str) -> dict | None:
     """
     r = requests.post(
         f"{BASE_URL}/eapi/v1/contacts/filter",
-        headers=HEADERS,
+        headers=auth_headers(),
         json={"shopGuid": SHOP_GUID, "Search": search},
     )
     r.raise_for_status()
@@ -149,7 +151,7 @@ def create_contact(
     r = requests.post(
         f"{BASE_URL}/eapi/v1/contacts",
         params={"shopGuid": SHOP_GUID},
-        headers=HEADERS,
+        headers=auth_headers(),
         json=body,
     )
     r.raise_for_status()
@@ -171,7 +173,8 @@ def get_contact_address_guid(contact_guid: str) -> str:
     """Retourne l'addressGuid principal d'un contact (requis pour créer un projet)."""
     r = requests.get(
         f"{BASE_URL}/eapi/v1/contacts/{contact_guid}",
-        headers=HEADERS,
+        params={"shopGuid": SHOP_GUID},
+        headers=auth_headers(),
     )
     r.raise_for_status()
     result = r.json()
@@ -196,7 +199,7 @@ def list_projects(contact_guid: str = None) -> list:
 
     r = requests.post(
         f"{BASE_URL}/eapi/v1/projects/filter",
-        headers=HEADERS,
+        headers=auth_headers(),
         json=body,
     )
     r.raise_for_status()
@@ -243,7 +246,7 @@ def create_project(
     r = requests.post(
         f"{BASE_URL}/eapi/v1/projects",
         params={"shopGuid": SHOP_GUID},
-        headers=HEADERS,
+        headers=auth_headers(),
         json=body,
     )
     r.raise_for_status()
@@ -263,7 +266,7 @@ def get_project_designs(project_guid: str) -> list:
     """
     r = requests.post(
         f"{BASE_URL}/eapi/v1/projects/designs/filter",
-        headers=HEADERS,
+        headers=auth_headers(),
         json={"projectGuid": project_guid, "shopGuid": SHOP_GUID},
     )
     r.raise_for_status()
@@ -303,7 +306,7 @@ def get_project_documents(project_guid: str, type_guids: list = None) -> list:
 
     r = requests.post(
         f"{BASE_URL}/eapi/v1/documents/filter",
-        headers=HEADERS,
+        headers=auth_headers(),
         json=body,
     )
     r.raise_for_status()
