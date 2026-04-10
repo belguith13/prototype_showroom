@@ -8,10 +8,6 @@ agents:
         model: claude-sonnet-4-6
     inputs:
       env:
-        ANTHROPIC_API_KEY:
-          kind: secret
-          requirement: required
-          description: "API key for Claude AI"
         NOTION_TOKEN:
           kind: secret
           requirement: required
@@ -50,10 +46,6 @@ agents:
         model: claude-sonnet-4-6
     inputs:
       env:
-        ANTHROPIC_API_KEY:
-          kind: secret
-          requirement: required
-          description: "API key for Claude AI"
         NOTION_TOKEN:
           kind: secret
           requirement: required

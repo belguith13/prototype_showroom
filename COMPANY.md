@@ -20,6 +20,7 @@ includes:
   - skills/email-handler/SKILL.md
   - skills/crm-lookup/SKILL.md
   - skills/kitchen-knowledge/SKILL.md
+  - skills/winner-flex-lookup/SKILL.md
   - projects/operations/PROJECT.md
   - tasks/hourly-email-check/TASK.md
   - tasks/weekly-ceo-report/TASK.md

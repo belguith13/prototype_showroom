@@ -3,95 +3,100 @@
 
 ---
 
-## Structure du projet
+## Prérequis
 
-```
-prototype_showroom/
-├── company/
-│   ├── company.md          → Description de l'entreprise
-│   └── goals.md            → Objectifs et KPIs
-├── agents/
-│   ├── ceo_assistant.md    → Max — Assistant Directeur
-│   └── sales_assistant.md  → Alex — Assistant Commercial
-├── skills/
-│   ├── email_handler/
-│   │   └── SKILL.md        → Lecture IMAP, classification, drafts
-│   └── crm_lookup/
-│       └── SKILL.md        → Connexion CRM Notion
-├── routines/
-│   ├── weekly_ceo_report.md   → Rapport lundi 08h00 (Max)
-│   └── hourly_email_check.md  → Vérif e-mails toutes les heures (Alex)
-├── knowledge/
-│   └── products.md         → Catalogue produits et prix
-└── tools/
-    └── secrets.env.example → Template variables d'environnement
-```
+- Docker + Docker Compose installés sur le VPS/machine cible
+- Compte Claude.ai (Pro ou Max) connecté via le CLI `claude`
+- Clés Gmail App Password pour la boîte email
 
 ---
 
-## Démarrage rapide
+## 1. Connexion Claude CLI (sur le VPS)
 
-### 1. Installer Paperclip
+Les agents Paperclip utilisent l'abonnement Claude.ai via le CLI `claude`. Avant de lancer Docker, connecter le CLI sur le VPS :
+
 ```bash
-npx paperclipai onboard
-# Choisir : authenticated + private (réseau local)
+# Installer le CLI claude si absent
+npm install -g @anthropic-ai/claude-code
+
+# Se connecter (ouvre un navigateur ou génère un lien)
+claude login
+
+# Vérifier la connexion
+claude auth status
+# → "loggedIn": true, "authMethod": "claude.ai"
 ```
 
-### 2. Créer la company "Bella Cucina"
-```bash
-# Via l'UI Paperclip ou l'API REST
-POST /api/companies
-{
-  "name": "Bella Cucina",
-  "goal": "Atteindre 1 200 000€ de CA signé en 2025 en offrant le meilleur conseil cuisine sur mesure à Paris."
-}
-```
-
-### 3. Créer les agents
-
-**Max — CEO Assistant**
-```bash
-POST /api/companies/{id}/agents
-{
-  "name": "Max",
-  "title": "CEO Assistant",
-  "adapterType": "claude_local",
-  "capabilities": "Synthèse hebdomadaire du pipeline, alertes stratégiques pour Marc, monitoring des KPIs.",
-  "budgetCents": 4000,
-  "heartbeatSchedule": "0 8 * * 1"
-}
-```
-
-**Alex — Sales Assistant**
-```bash
-POST /api/companies/{id}/agents
-{
-  "name": "Alex",
-  "title": "Sales Assistant",
-  "adapterType": "claude_local",
-  "reportsTo": "{max_agent_id}",
-  "capabilities": "Lecture e-mails entrants, qualification leads, rédaction de drafts de réponse, suivi relances.",
-  "budgetCents": 5000,
-  "heartbeatSchedule": "0 10-19 * * 2-6"
-}
-```
-
-### 4. Copier les skills dans le dossier Paperclip
-```bash
-cp -r skills/ ~/.paperclip/companies/{company_id}/skills/
-```
-
-### 5. Configurer les secrets
-Dans l'UI Paperclip → Settings → Secrets, ajouter :
-- `EMAIL_IMAP_HOST`, `EMAIL_IMAP_PORT`, `EMAIL_USER`, `EMAIL_PASS`
-- `NOTION_TOKEN`, `NOTION_CRM_DB_ID`
-- `ANTHROPIC_API_KEY`
+Le token est stocké dans `~/.claude.json` sur le VPS. Il sera monté en lecture seule dans le container.
 
 ---
 
-## Flux de test — Email entrant prospect
+## 2. Lancer Paperclip via Docker
 
-1. Envoyer un e-mail de test à contact@bellacucina.fr :
+```bash
+git clone https://github.com/paperclipai/paperclip.git
+cd paperclip
+
+BETTER_AUTH_SECRET="$(openssl rand -base64 32)" \
+PAPERCLIP_PUBLIC_URL="https://app.votredomaine.com" \
+PAPERCLIP_DEPLOYMENT_MODE="authenticated" \
+PAPERCLIP_DEPLOYMENT_EXPOSURE="public" \
+EMAIL_IMAP_HOST="imap.gmail.com" \
+EMAIL_IMAP_PORT="993" \
+EMAIL_SMTP_HOST="smtp.gmail.com" \
+EMAIL_SMTP_PORT="587" \
+EMAIL_USER="contact@bellacucina.fr" \
+EMAIL_PASS="<gmail-app-password>" \
+docker compose -f docker/docker-compose.quickstart.yml \
+  -f docker/docker-compose.claude-auth.yml up -d
+```
+
+> **Note** : `docker-compose.claude-auth.yml` monte `~/.claude` et `~/.claude.json` en read-only dans le container pour que les agents utilisent l'abonnement Claude.ai.
+
+### Récupérer l'URL Board Claim (premier démarrage uniquement)
+
+```bash
+docker compose -f docker/docker-compose.quickstart.yml logs | grep board-claim
+```
+
+Visiter l'URL dans le navigateur pour créer le compte administrateur.
+
+---
+
+## 3. Importer la company Bella Cucina
+
+Dans l'UI Paperclip (http://localhost:3100 ou votre domaine) :
+
+1. **Créer une nouvelle company**
+2. **Importer depuis GitHub** : `https://github.com/belguith13/prototype_showroom`
+3. Vérifier l'aperçu — aucune erreur ne doit apparaître
+4. Confirmer l'import
+
+L'import crée automatiquement :
+- Les agents **Max** (CEO) et **Alex** (Commercial)
+- Le projet **Opérations**
+- Les routines **hourly-email-check** et **weekly-ceo-report**
+- Les skills email-handler, crm-lookup, kitchen-knowledge
+
+---
+
+## 4. Créer les Goals manuellement
+
+Les goals ne sont pas encore importés automatiquement. Les créer dans **Settings > Goals** (scope : Company) :
+
+| Titre | Description |
+|-------|-------------|
+| CA annuel 2025 | Atteindre 1 200 000€ de chiffre d'affaires signé sur l'année 2025 |
+| Réactivité leads | Répondre à tout lead entrant sous 2h pendant les heures ouvrées |
+| Taux de prise de RDV | Atteindre un taux de prise de RDV sur lead entrant ≥ 50% |
+| Pipeline actif | Maintenir un pipeline actif d'au moins 15 projets à tout moment |
+| Délai devis | Envoyer tout devis dans les 48h suivant la visite showroom |
+
+---
+
+## 5. Test — Flux email entrant prospect
+
+1. Envoyer un e-mail de test à la boîte configurée :
    ```
    De : jean.dupont@gmail.com
    Objet : Renseignements cuisine
@@ -100,24 +105,52 @@ Dans l'UI Paperclip → Settings → Secrets, ajouter :
            Cordialement, Jean Dupont
    ```
 
-2. Déclencher manuellement le heartbeat d'Alex (bouton "Invoke" dans l'UI)
+2. Déclencher manuellement le heartbeat d'Alex :
+   - UI Paperclip → **Routines** → `hourly-email-check` → **Run now**
 
 3. Vérifier dans Paperclip :
-   - Un ticket "Nouveau lead — Jean Dupont" a été créé
-   - Le ticket contient les données extraites + le draft e-mail
-   - La fiche CRM a été créée dans Notion
+   - Un ticket "Nouveau lead — Jean Dupont" créé dans Opérations
+   - Le ticket contient les données extraites + draft de réponse
+   - Logs de l'agent visibles dans l'onglet Activity
 
-4. Sophie valide et envoie le draft depuis sa messagerie
+---
+
+## Structure du projet
+
+```
+prototype_showroom/
+├── COMPANY.md              → Manifest company (schema agentcompanies/v1)
+├── .paperclip.yaml         → Config Paperclip (adapter, routines, budgets)
+├── agents/
+│   ├── max/
+│   │   ├── AGENTS.md       → Max — CEO Assistant
+│   │   ├── SOUL.md         → Personnalité et ton
+│   │   └── HEARTBEAT.md    → Instructions d'exécution hebdomadaire
+│   └── alex/
+│       ├── AGENTS.md       → Alex — Sales Assistant
+│       ├── SOUL.md         → Personnalité et ton
+│       └── HEARTBEAT.md    → Instructions d'exécution horaire
+├── skills/
+│   ├── email-handler/SKILL.md    → IMAP, classification, drafts SMTP
+│   ├── crm-lookup/SKILL.md       → Connexion CRM Notion
+│   └── kitchen-knowledge/SKILL.md → Catalogue produits, prix, fournisseurs
+├── projects/
+│   └── operations/PROJECT.md    → Projet conteneur des routines
+└── tasks/
+    ├── hourly-email-check/TASK.md  → Routine Alex (mar–sam 10h–19h)
+    └── weekly-ceo-report/TASK.md   → Routine Max (lundi 08h00)
+```
 
 ---
 
 ## Roadmap prototype → production
 
-| Étape | Description | Effort |
-|---|---|---|
-| ✅ Prototype | Company Folder + 2 agents + email skill | Fait |
-| 🔲 Test e2e | Test flux complet sur vraie boîte e-mail | 1 jour |
-| 🔲 Connecteur agenda | Intégration Google Calendar pour les RDV | 2 jours |
-| 🔲 Agent Designer | Léa — traitement exports Winner/DXF | 3 jours |
-| 🔲 Interface vocale | App web STT/TTS pour mobile | 3 jours |
-| 🔲 Dashboard client | Vue simplifiée pour Marc (non-tech) | 2 jours |
+| Étape | Description | Statut |
+|-------|-------------|--------|
+| Company Folder | 2 agents + skills + routines | ✅ Fait |
+| Déploiement Docker | Mode authenticated + public | ✅ Fait |
+| Test flux email | Alex lit et traite les emails entrants | ✅ Fait |
+| Connecteur agenda | Google Calendar pour les RDV | 🔲 À faire |
+| Agent Designer | Léa — exports Winner/DXF | 🔲 À faire |
+| Interface vocale | App web STT/TTS mobile | 🔲 À faire |
+| Déploiement VPS | Hostinger KVM2 + Nginx + HTTPS | 🔲 À faire |
